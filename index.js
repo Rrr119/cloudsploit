@@ -66,6 +66,16 @@ parser.add_argument('--suppress', {
     help: 'Suppress results matching the provided Regex. Format: pluginId:region:resourceId',
     action: 'append'
 });
+parser.add_argument('--fp-rules', {
+    help: 'Path to a JSON file with false-positive suppression rules matched on resource tags and time windows.'
+});
+parser.add_argument('--fp-audit', {
+    help: 'Path to write JSONL audit records for every false-positive suppression rule hit. Defaults to fp-suppression-audit.jsonl when --fp-rules is used.'
+});
+parser.add_argument('--no-fp-suppress', {
+    help: 'Loads and validates --fp-rules but does not suppress any results (rules are still evaluated and audit records are emitted).',
+    action: 'store_true'
+});
 parser.add_argument('--remediate', {
     help: 'Run remediation the provided plugin',
     action: 'append'

@@ -1,0 +1,17 @@
+{
+  "root": "/home/dev/feedback/uid38836",
+  "B": "/home/dev/feedback/uid38836",
+  "sha": "25243857660ad69bf7f35d050c1b3c450bcd1b30",
+  "wslDistro": "Ubuntu-26.04",
+  "source": {
+    "owner": "aquasecurity",
+    "repo": "cloudsploit",
+    "sha": "25243857660ad69bf7f35d050c1b3c450bcd1b30"
+  },
+  "fork": {
+    "owner": "Rrr119",
+    "repo": "cloudsploit",
+    "cloneUrl": "https://github.com/Rrr119/cloudsploit.git"
+  },
+  "at": "2026-11-25T19:35:21.675Z"
+}

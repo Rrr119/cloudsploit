@@ -335,6 +335,17 @@ $ ./index.js --suppress *:us-east-1:*
 $ ./index.js --suppress *:*:certificate/*
 ```
 
+### False-Positive Suppression (tags and time windows)
+In addition to regex suppressions, acknowledged false positives can be
+suppressed with data-driven rules that match resource tags and explicit time
+windows. Every hit is written to an audit trail and alerts receive a
+confidence grade. See [docs/false-positive-suppression.md](docs/false-positive-suppression.md)
+for the rule schema and safety invariants.
+```
+$ ./index.js --config config.js --fp-rules postprocess/fp-rules.example.json \
+    --fp-audit fp-suppression-audit.jsonl
+```
+
 ## Running a Single Plugin
 The `--plugin` flag can be used if you only wish to run one plugin.
 ```

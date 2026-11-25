@@ -5,6 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "mocha './**/*.spec.js'",
+    "test:fp-acceptance": "mocha tests/fp-suppression/acceptance.spec.js tests/fp-suppression/engineIntegration.spec.js",
+    "fp:report": "node tests/fp-suppression/acceptance.js",
     "test-watch": "nodemon --exec npm run test",
     "test-cov": "nyc --reporter text --reporter cobertura --reporter lcov --all -- npm run test",
     "test-cov-watch": "nodemon --exec npm run test-cov",

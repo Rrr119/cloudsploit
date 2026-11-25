@@ -93,7 +93,7 @@ describe('output', function () {
             var handler = output.createCsv(buffer, { mocha: true, junit: 'test.csv' });
             handler.writeResult({status: 0}, {title:'myTitle', description: 'myDescription'}, 'key');
             handler.close();
-            expect(buffer.cache).to.equal('category,title,description,resource,region,statusWord,message\n,myTitle,myDescription,N/A,Global,OK,\n');
+            expect(buffer.cache).to.equal('category,title,description,resource,region,statusWord,message,confidenceLevel,confidenceScore,suppressed,suppressionRule\n,myTitle,myDescription,N/A,Global,OK,,,,no,\n');
         })
     })
 
@@ -110,7 +110,7 @@ describe('output', function () {
             var handler = output.createJson(buffer, { mocha: true, junit: 'test.json' });
             handler.writeResult({ status: 0 }, { title: 'myTitle', description: 'myDescription' }, 'key');
             handler.close();
-            expect(JSON.stringify(JSON.parse(buffer.cache))).to.equal('[{"plugin":"key","title":"myTitle","description":"myDescription","resource":"N/A","region":"Global","status":"OK"}]');
+            expect(JSON.stringify(JSON.parse(buffer.cache))).to.equal('[{"plugin":"key","title":"myTitle","description":"myDescription","resource":"N/A","region":"Global","status":"OK","confidence":null,"suppressed":false,"suppression":null}]');
         })
     })
 

@@ -2,7 +2,12 @@ var async = require('async');
 var exports = require('./exports.js');
 var suppress = require('./postprocess/suppress.js');
 var output = require('./postprocess/output.js');
+var tagIndex = require('./postprocess/tagIndex.js');
+var fpSuppression = require('./postprocess/fpSuppression.js');
+var confidence = require('./postprocess/confidence.js');
+var audit = require('./postprocess/audit.js');
 var azureHelper = require('./helpers/azure/auth.js');
+var fs = require('fs');
 
 function runAuth(settings, remediateConfig, callback) {
     if (settings.cloud && settings.cloud == 'azure') {
@@ -51,6 +56,24 @@ async function uploadResultsToBlob(resultsObject, storageConnection, blobContain
 var engine = function(cloudConfig, settings) {
     // Initialize any suppression rules based on the the command line arguments
     var suppressionFilter = suppress.create(settings.suppress);
+
+    // Load false-positive suppression rules (tag + time-window based).
+    // These are independent from the legacy regex suppress flags.
+    var fpRules = [];
+    if (settings.fp_rules) {
+        try {
+            var rawRules = JSON.parse(fs.readFileSync(settings.fp_rules, 'utf8'));
+            fpRules = Array.isArray(rawRules) ? rawRules :
+                (rawRules && Array.isArray(rawRules.rules) ? rawRules.rules : []);
+            console.log(`INFO: Loaded ${fpRules.length} false-positive suppression rule(s) from ${settings.fp_rules}`);
+        } catch (e) {
+            console.log(`ERROR: Unable to load false-positive rules file ${settings.fp_rules}: ${e.message}`);
+        }
+    }
+
+    var auditSink = settings.fp_audit ||
+        (settings.fp_rules ? 'fp-suppression-audit.jsonl' : null);
+    var auditHandler = audit.create(auditSink);
 
     // Initialize the output handler
     var outputHandler = output.create(settings);
@@ -177,6 +200,19 @@ var engine = function(cloudConfig, settings) {
         console.log('INFO: Metadata collection complete. Analyzing...');
         console.log('INFO: Analysis complete. Scan report to follow...');
 
+        // Build the resource tag index and false-positive evaluator once
+        // per scan, from the collected metadata. Plugins remain unchanged.
+        var resourceTagIndex = tagIndex.build(collection);
+        var fpEvaluator = fpSuppression.create(fpRules, {
+            lookup: function(resource) { return tagIndex.lookup(resourceTagIndex, resource); }
+        });
+
+        if (fpEvaluator.invalidRules.length) {
+            fpEvaluator.invalidRules.forEach(function(entry) {
+                console.log(`ERROR: Ignoring invalid false-positive rule at index ${entry.index}: ${entry.reason}`);
+            });
+        }
+
         var maximumStatus = 0;
         var resultsObject = {};  // Initialize resultsObject for azure gov cloud
 
@@ -196,6 +232,32 @@ var engine = function(cloudConfig, settings) {
                             // so that it doesn't affect the return code.
                             if (suppressionFilter([key, results[r].region || 'any', results[r].resource || 'any'].join(':'))) {
                                 continue;
+                            }
+
+                            // Annotate every result with a confidence grade.
+                            // This never alters the plugin status.
+                            var resourceTags = tagIndex.lookup(resourceTagIndex, results[r].resource);
+                            results[r].confidence = confidence.grade(results[r], resourceTags, plugin);
+
+                            // Evaluate tag/time-window based false-positive
+                            // rules. UNKNOWN results (status 3) are never
+                            // suppressed so collection errors stay visible.
+                            var fpMatch = fpEvaluator.evaluate(key, results[r]);
+                            if (fpMatch) {
+                                auditHandler.record(fpMatch);
+                                if (!settings.no_fp_suppress) {
+                                    if (!resultsObject[plugin.title]) {
+                                        resultsObject[plugin.title] = [];
+                                    }
+                                    results[r].suppressed = true;
+                                    results[r].suppression = {
+                                        ruleId: fpMatch.ruleId,
+                                        reason: fpMatch.reason,
+                                        window: fpMatch.window
+                                    };
+                                    resultsObject[plugin.title].push(results[r]);
+                                    continue;
+                                }
                             }
     
                             resultsObject[plugin.title].push(results[r]);
@@ -262,6 +324,22 @@ var engine = function(cloudConfig, settings) {
 
                 if (cloudConfig.StorageConnection && cloudConfig.BlobContainer) uploadResultsToBlob(resultsObject, cloudConfig.StorageConnection, cloudConfig.BlobContainer);
                 // console.log(JSON.stringify(collection, null, 2));
+                var auditSummary = auditHandler.summary();
+                if (auditSummary.totalSuppressed) {
+                    if (settings.no_fp_suppress) {
+                        console.log(`INFO: False-positive suppression dry run: ${auditSummary.totalSuppressed} rule match(es) audited, 0 result(s) suppressed`);
+                    } else {
+                        console.log(`INFO: False-positive suppression audit: ${auditSummary.totalSuppressed} result(s) suppressed`);
+                    }
+                    Object.keys(auditSummary.suppressedByRule).forEach(function(ruleId) {
+                        console.log(`INFO:   rule ${ruleId}: ${auditSummary.suppressedByRule[ruleId]} hit(s)`);
+                    });
+                }
+                if (auditSink) {
+                    auditHandler.close(function() {
+                        console.log(`INFO: Suppression audit records written to ${auditSink}`);
+                    });
+                }
                 outputHandler.close();
                 if (settings.exit_code) {
                     // The original cloudsploit always has a 0 exit code. With this option, we can have

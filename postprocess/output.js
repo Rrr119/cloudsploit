@@ -41,6 +41,10 @@ var consoleOutputHandler = {
             Resource: (result.resource || 'N/A'),
             Region: (result.region || 'global'),
             Status: exchangeStatusWord(result),
+            Confidence: (result.confidence && result.confidence.level) ?
+                `${result.confidence.level} (${result.confidence.score})` : 'N/A',
+            Suppressed: result.suppressed ?
+                `yes (${result.suppression.ruleId})` : 'no',
             Message: result.message || 'N/A'
         };
 
@@ -92,7 +96,8 @@ module.exports = {
      */
     createCsv: function(stream, settings) {
         var headers = ['category', 'title', 'description',
-            'resource', 'region', 'statusWord', 'message'];
+            'resource', 'region', 'statusWord', 'message',
+            'confidenceLevel', 'confidenceScore', 'suppressed', 'suppressionRule'];
         if (settings.compliance) headers.push('compliance');
         var csvWriter = require('csv-write-stream');
         var writer = csvWriter({headers: headers});
@@ -105,7 +110,11 @@ module.exports = {
                 var toWrite = [plugin.category, plugin.title, commaSafe(plugin.description),
                     (result.resource || 'N/A'),
                     (result.region || 'Global'),
-                    exchangeStatusWord(result), commaSafe(result.message)];
+                    exchangeStatusWord(result), commaSafe(result.message),
+                    (result.confidence && result.confidence.level) || '',
+                    (result.confidence && result.confidence.score) || '',
+                    result.suppressed ? 'yes' : 'no',
+                    (result.suppression && result.suppression.ruleId) || ''];
                 
                 if (settings.compliance) toWrite.push(complianceMsg || '');
                 
@@ -138,7 +147,10 @@ module.exports = {
                     resource: result.resource || 'N/A',
                     region: result.region || 'Global',
                     status: exchangeStatusWord(result),
-                    message: result.message
+                    message: result.message,
+                    confidence: result.confidence || null,
+                    suppressed: Boolean(result.suppressed),
+                    suppression: result.suppression || null
                 };
 
                 if (complianceMsg) toWrite.compliance = complianceMsg;
@@ -362,6 +374,12 @@ module.exports = {
                     }
                     return value;
                 }
+            },
+            {
+                value: 'Confidence'
+            },
+            {
+                value: 'Suppressed'
             },
             {
                 value: 'Message'

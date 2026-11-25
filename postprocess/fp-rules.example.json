@@ -1,0 +1,36 @@
+[
+    {
+        "id": "fp-pentest-ssh",
+        "reason": "Authorized penetration test jump box",
+        "plugin": "openSSH",
+        "region": "*",
+        "tags": {
+            "fp-acknowledged": "true"
+        },
+        "statuses": [1, 2],
+        "start": "2026-01-01T00:00:00Z",
+        "end": "2026-12-31T23:59:59Z",
+        "enabled": true
+    },
+    {
+        "id": "fp-ephemeral-ebs",
+        "reason": "Ephemeral testing volumes with an approved encryption exception",
+        "plugin": "ebsEncryptionEnabled",
+        "tags": {
+            "exception-approved": "*"
+        },
+        "start": "2026-01-01T00:00:00Z",
+        "end": "2026-12-31T23:59:59Z"
+    },
+    {
+        "id": "fp-migration-buckets",
+        "reason": "Migration buckets with a temporary encryption exception",
+        "plugin": "bucketEncryption",
+        "resource": "arn:aws:s3:::migration-.*",
+        "tags": {
+            "exception-approved": "migration"
+        },
+        "start": "2026-01-01T00:00:00Z",
+        "end": "2026-12-31T23:59:59Z"
+    }
+]

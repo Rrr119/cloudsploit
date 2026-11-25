@@ -1,0 +1,18 @@
+[
+    {
+        "id": "fp-pentest-ssh",
+        "reason": "Authorized penetration test jump box",
+        "plugin": "openSSH",
+        "tags": {"fp-acknowledged": "true"},
+        "start": "2026-01-01T00:00:00Z",
+        "end": "2026-12-31T23:59:59Z"
+    },
+    {
+        "id": "fp-temp-migration-sg",
+        "reason": "Temporary migration security group",
+        "plugin": "openSSH",
+        "tags": {"environment": "temp-*"},
+        "start": "2026-01-01T00:00:00Z",
+        "end": "2026-12-31T23:59:59Z"
+    }
+]
